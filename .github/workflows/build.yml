@@ -1,0 +1,55 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "develop", "master", "hotfix" ]
+    paths-ignore:
+      - "**.md"
+      - "**.txt"
+      - "docs/**"
+      - ".gitignore"
+  pull_request:
+    branches: [ "develop", "master" ]
+  release:
+    types: [ "created" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SleepMost
+          path: target/*.jar
+
+  release:
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'created'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SleepMost
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.jar"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
